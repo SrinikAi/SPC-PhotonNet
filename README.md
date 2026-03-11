@@ -1,36 +1,48 @@
-# SPC-PhotonNet
-SPC-PhotonNet is a PyTorch implementation for Single-photon camera reconstruction with pixel-wise temporal attention and U-Net refinement.
-
 # PhotonNet: Temporal Attention U-Net for Single-Photon Camera Reconstruction
 
-PhotonNet is a PyTorch-based reconstruction model for **single-photon camera (SPC)** data. It converts photon cube measurements stored as `.npy` files into RGB image reconstructions by combining a pixel-wise temporal attention module with a compact U-Net decoder. [file:1][file:2]
-
-The model is designed for paired training with `.npy` photon measurements and corresponding `.png` RGB targets. The preprocessing pipeline aggregates photon events into 8 temporal groups, learns how much each temporal group should contribute at each pixel, and then refines the fused representation with a convolutional encoder-decoder network. [file:1][file:2]
+PhotonNet is a PyTorch implementation for reconstructing RGB images from **single-photon camera (SPC)** measurements stored as `.npy` photon cubes. The model combines **pixel-wise temporal attention** with a compact **U-Net** to fuse sparse photon observations and generate clean image reconstructions.
 
 ## Overview
 
-Single-photon camera data is highly sparse and noisy, so directly reconstructing a clean image from raw measurements is difficult. In this implementation, the input photon cube is first transformed into a compact set of temporal summaries, then the model learns a per-pixel weighting over those summaries before image reconstruction. [file:1][file:2]
+Single-photon camera data is sparse, noisy, and temporally distributed. PhotonNet addresses this by splitting the reconstruction problem into two stages:
 
-The overall architecture has two main stages:  
-1. **PixelTemporalAttention** for temporal fusion across grouped photon measurements. [file:2]  
-2. **UNetSmall** for spatial refinement and final RGB reconstruction. [file:2]
+1. **Temporal fusion** across grouped photon measurements.
+2. **Spatial reconstruction** using a U-Net decoder.
 
-This gives the model a clear division of labor: the attention block decides **when** information is useful, while the U-Net decides **how** to spatially reconstruct a clean image from the fused response. [file:2]
+This design lets the model first decide which temporal groups are most informative at each pixel, then refine the fused response into a final RGB image.
 
-## Input representation
 
-The training dataset expects class-wise folders containing paired `.npy` and `.png` files with the same base filename. The loader searches each class directory, pairs every `.npy` file with a `.png` file of the same stem, and uses those pairs for supervised training. [file:1]
+### Data set format
+data/
+├── class_1/
+│   ├── sample_001.npy
+│   ├── sample_001.png
+│   ├── sample_002.npy
+│   └── sample_002.png
+├── class_2/
+│   ├── sample_101.npy
+│   ├── sample_101.png
+│   └── ...
 
-Each `.npy` file is treated as a photon cube with shape `(1024, 800, 100, 3)`. The preprocessing routine divides the 1024 frames into 8 equal temporal groups, so each group contains 128 frames. [file:1]
+### Training command
+python cli.py \
+  --data_path ./data/train \
+  --batch_size 1 \
+  --lr 2e-4 \
+  --device cuda:0 \
+  --epochs 100 \
+  --save_dir ./runs_spc \
+  --num_workers 10 \
+  --embed_dim 16 \
+  --hidden_dim 32 \
+  --unet_base 32 \
+  --heatmap_loss_weight 0.3
+  
+Repository structure
 
-For each temporal group:
-- A slice of shape `(128, 800, 100, 3)` is extracted. [file:1]
-- `np.unpackbits(..., axis=2)` expands the packed bit dimension from 100 to 800, producing `(128, 800, 800, 3)`. [file:1]
-- The 128 frames are summed along the temporal axis, giving a photon accumulation image of shape `(800, 800, 3)` for that group. [file:1]
-
-After all 8 groups are processed, the result is a tensor of shape `(8, 800, 800, 3)`. This tensor is normalized by its global maximum value and converted to a PyTorch tensor before being passed to the model. [file:1]
-
-So the network input for one sample is:
-
-```text
-x: (8, 800, 800, 3)
+spc-photonnet/
+├── PhotonNet.py
+├── cli.py
+├── inference.py
+├── README.md
+└── requirements.txt
