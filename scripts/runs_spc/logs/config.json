@@ -1,0 +1,16 @@
+{
+  "data_path": "/home/skachavarapu/home/spc/train",
+  "batch_size": 8,
+  "lr": 0.0002,
+  "device": "cuda:0",
+  "epochs": 100,
+  "save_dir": "./runs_spc",
+  "num_workers": 8,
+  "seed": 42,
+  "grad_accum_steps": 1,
+  "embed_dim": 16,
+  "hidden_dim": 32,
+  "unet_base": 32,
+  "heatmap_loss_weight": 0.3,
+  "weight_decay": 0.0001
+}

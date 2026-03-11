@@ -1,18 +1,14 @@
-# PhotonNet: Temporal Attention U-Net for Single-Photon Camera Reconstruction
+# PhotonNet: Temporal Attention U-Net for Single-Photon Reconstruction
 
-PhotonNet is a PyTorch implementation for reconstructing RGB images from **single-photon camera (SPC)** measurements stored as `.npy` photon cubes. The model combines **pixel-wise temporal attention** with a compact **U-Net** to fuse sparse photon observations and generate clean image reconstructions.
+PhotonNet reconstructs RGB images from **single-photon camera (SPC)** photoncubes (`.npy`) using **pixel-wise temporal attention** followed by a compact **U-Net**.
 
-## Overview
+**Key ideas**
+- Split reconstruction into temporal fusion (per-pixel attention over time) and spatial refinement (U-Net).
+- Input: 8 temporal groups derived from packed SPC bitplanes.
+- Outputs: reconstructed RGB image, attention heatmap, and attention weights.
 
-Single-photon camera data is sparse, noisy, and temporally distributed. PhotonNet addresses this by splitting the reconstruction problem into two stages:
-
-1. **Temporal fusion** across grouped photon measurements.
-2. **Spatial reconstruction** using a U-Net decoder.
-
-This design lets the model first decide which temporal groups are most informative at each pixel, then refine the fused response into a final RGB image.
-
-
-### Data set format
+**Data format**
+```
 data/
 ├── class_1/
 │   ├── sample_001.npy
@@ -20,12 +16,19 @@ data/
 │   ├── sample_002.npy
 │   └── sample_002.png
 ├── class_2/
-│   ├── sample_101.npy
-│   ├── sample_101.png
 │   └── ...
+```
+- Each `.npy` must have a paired `.png` with the same stem.
+- The loader expects photoncubes shaped like `(1024, 800, 100, 3)` and builds 8 temporal groups.
 
-### Training command
-python cli.py \
+**Dependencies**
+- Python 3.9+
+- PyTorch
+- numpy, pillow, tqdm, torchmetrics
+
+**Train**
+```
+python scripts/cli.py \
   --data_path ./data/train \
   --batch_size 1 \
   --lr 2e-4 \
@@ -37,12 +40,27 @@ python cli.py \
   --hidden_dim 32 \
   --unet_base 32 \
   --heatmap_loss_weight 0.3
-  
-Repository structure
+```
+- Train/val split is 80/20.
 
-spc-photonnet/
-├── PhotonNet.py
-├── cli.py
-├── inference.py
-├── README.md
-└── requirements.txt
+**Outputs**
+- `runs_spc/logs/metrics.csv`
+- `runs_spc/checkpoints/latest.pt`
+- `runs_spc/checkpoints/best_val_loss.pt`
+- `runs_spc/checkpoints/best_lpips.pt`
+
+**Inference**
+```
+python scripts/Test.py \
+  --test_dir ./data/test \
+  --ckpt ./runs_spc/checkpoints/best_lpips.pt \
+  --output_dir ./inference \
+  --device cuda:0
+```
+- Outputs reconstructed `.png` files under `inference/<class_name>/`.
+
+**Notes**
+- The code uses AMP on CUDA but will fall back to CPU if CUDA is unavailable.
+
+**License**
+Apache License 2.0. See `LICENSE` and `NOTICE`.

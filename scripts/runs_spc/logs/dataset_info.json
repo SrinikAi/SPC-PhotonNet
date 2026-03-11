@@ -1,0 +1,6 @@
+{
+  "num_total": 1611,
+  "num_train": 1288,
+  "num_val": 323,
+  "device": "cuda:0"
+}
