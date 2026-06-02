@@ -14,7 +14,7 @@ data/
 │   ├── sample_001.npy
 │   ├── sample_001.png
 │   ├── sample_002.npy
-│   └── sample_002.png
+│   └── sample_002.png            # processed
 ├── class_2/
 │   └── ...
 ```
